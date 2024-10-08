@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Locator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
+</head>
+<body>
+
+<div id="map" style="height: 500px;"></div>
+<button id="findHospitals">Find Nearby Hospitals</button>
+<div id="hospitals"></div>
+
+<script>
+    let map;
+    let userLocation;
+
+    // Initialize the Google Map
+    function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: { lat: -34.397, lng: 150.644 }, // Default center
+            zoom: 15,
+        });
+
+        // Get User's Location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                };
+                map.setCenter(userLocation);
+                new google.maps.Marker({
+                    position: userLocation,
+                    map: map,
+                    title: 'Your Location',
+                });
+            });
+        }
+    }
+
+    // Find nearby hospitals
+    document.getElementById("findHospitals").onclick = function () {
+        const request = {
+            location: userLocation,
+            radius: '5000', // search within 5km radius
+            type: ['hospital'],
+        };
+
+        const service = new google.maps.places.PlacesService(map);
+        service.nearbySearch(request, (results, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK) {
+                const hospitalsDiv = document.getElementById("hospitals");
+                hospitalsDiv.innerHTML = '<h2>Nearby Hospitals:</h2>';
+                results.forEach(hospital => {
+                    const hospitalInfo = `<p>${hospital.name}</p>`;
+                    hospitalsDiv.innerHTML += hospitalInfo;
+
+                    // Calculate ETA for Ambulance (simulated)
+                    calculateETA(hospital.geometry.location);
+                });
+            }
+        });
+    };
+
+    // Calculate ETA to Hospitals
+    function calculateETA(destination) {
+        const request = {
+            origin: userLocation,
+            destination: destination,
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.IMPERIAL,
+            drivingOptions: {
+                departureTime: new Date(Date.now() + 1000 * 60), // now or specify a time
+                trafficModel: 'bestguess'
+            }
+        };
+
+        const directionsService = new google.maps.DirectionsService();
+        directionsService.route(request, (response, status) => {
+            if (status === google.maps.DirectionsStatus.OK) {
+                const route = response.routes[0].legs[0];
+                alert(`Estimated time to ${route.end_address}: ${route.duration.text}`);
+            }
+        });
+    }
+
+    // Load the map
+    window.onload = initMap;
+</script>
+
+</body>
+</html>
